@@ -76,18 +76,14 @@ func getSIEMLogs() []SIEMlog {
 func setupAPI() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Обработчик для статических файлов (HTML, CSS, JS)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			// Обслуживание index.html
 			http.ServeFile(w, r, "index.html")
 			return
 		}
-		// Для других статических файлов
 		http.FileServer(http.Dir(".")).ServeHTTP(w, r)
 	})
 
-	// Обработчик для аутентификации
 	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -100,12 +96,9 @@ func setupAPI() *http.ServeMux {
 			return
 		}
 
-		// Простая проверка учетных данных для демонстрации
-		// В производственной системе здесь должна быть надежная аутентификация
+		// CRITICAL
 		if auth.Email == os.Getenv("EMAIL") && auth.Password == os.Getenv("PASSWORD") {
-			// Генерация простого токена (в реальности использовать JWT)
 			token := "sample-token-" + time.Now().Format(time.RFC3339)
-
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(AuthResponse{Token: token})
 		} else {
@@ -113,16 +106,12 @@ func setupAPI() *http.ServeMux {
 		}
 	})
 
-	// Обработчик для получения SIEM логов
 	mux.HandleFunc("/api/protected/siem-logs", func(w http.ResponseWriter, r *http.Request) {
-		// Проверка авторизации (в реальности использовать JWT)
 		token := r.Header.Get("Authorization")
 		if !strings.HasPrefix(token, "Bearer ") {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
-
-		// В реальном приложении нужно валидировать токен
 
 		logs := getSIEMLogs()
 		w.Header().Set("Content-Type", "application/json")
@@ -239,7 +228,6 @@ func (s *ServiceSIEM) StartPolling() {
 			return logs[i].Timestamp < logs[j].Timestamp
 		})
 
-		// Карта для отслеживания неудачных попыток входа по пользователю
 		failedAttempts := make(map[string][]time.Time)
 
 		var processedLogs []SIEMlog
@@ -253,7 +241,6 @@ func (s *ServiceSIEM) StartPolling() {
 			level := 0
 			message := "login attempt"
 
-			// Отслеживаем только НЕУДАЧНЫЕ попытки для определения брутфорса
 			if !logEntry.Success {
 				failedAttempts[logEntry.Email] = append(failedAttempts[logEntry.Email], timestamp)
 
@@ -283,7 +270,6 @@ func (s *ServiceSIEM) StartPolling() {
 			processedLogs = append(processedLogs, siemLog)
 		}
 
-		// Обновляем логи в хранилище
 		if len(processedLogs) > 0 {
 			updateSIEMLogs(processedLogs)
 		}
@@ -295,7 +281,6 @@ func main() {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
-	// Проверяем существование index.html
 	_, err := os.Stat("index.html")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -304,7 +289,6 @@ func main() {
 		log.Fatalf("Error checking index.html: %v", err)
 	}
 
-	// Настраиваем SIEM
 	config := Config{
 		APIBaseURL:      "http://localhost:7777", // Внешний API с логами
 		PollingInterval: 5 * time.Second,
@@ -317,10 +301,8 @@ func main() {
 		log.Printf("Failed to login to external API: %v", err)
 	}
 
-	// Запускаем HTTP сервер для веб-интерфейса
 	mux := setupAPI()
 
-	// Запускаем HTTP сервер в отдельной горутине
 	webServerAddr := "localhost:8080"
 	go func() {
 		log.Printf("Starting web server at http://%s", webServerAddr)
@@ -329,6 +311,5 @@ func main() {
 		}
 	}()
 
-	// Запускаем сборщик логов
 	siem.StartPolling()
 }
