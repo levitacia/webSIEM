@@ -55,7 +55,7 @@
                 </div>
                 <div class="w-full md:w-1/2 lg:w-1/4 px-2 mb-4">
                     <div class="bg-white rounded-lg shadow-lg p-4">
-                        <h3 class="text-lg font-bold mb-2 text-gray-700">Alerts</h3>
+                        <h3 class="text-lg font-bold mb-2 text-gray-700">Level 1</h3>
                         <p id="totalAlerts" class="text-3xl font-bold text-red-600">0</p>
                     </div>
                 </div>
@@ -85,8 +85,8 @@
                         </button>
                         <select id="filterLevel" class="border rounded p-2">
                             <option value="all">All Levels</option>
-                            <option value="0">Normal</option>
-                            <option value="1">Alert</option>
+                            <option value="0">0</option>
+                            <option value="1">1</option> <!-- // LEVEL EDITED -->
                         </select>
                     </div>
                 </div>
@@ -309,9 +309,9 @@
                     // Level indicator
                     let levelBadge;
                     if (log.level === 0) {
-                        levelBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Normal</span>';
+                        levelBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">0</span>';
                     } else {
-                        levelBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Alert</span>';
+                        levelBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">1</span>';
                     }
                     
                     // Status indicator

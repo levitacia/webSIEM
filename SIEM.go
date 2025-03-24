@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -65,6 +66,12 @@ func updateSIEMLogs(logs []SIEMlog) {
 	log.Printf("Updated SIEM logs. Current count: %d", len(siemLogs))
 }
 
+func validateAuth(auth Auth) bool {
+	pattern := `^[A-Za-z0-9]+$`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(auth.Email) && re.MatchString(auth.Password)
+}
+
 func getSIEMLogs() []SIEMlog {
 	siemLogsMutex.RLock()
 	defer siemLogsMutex.RUnlock()
@@ -96,11 +103,42 @@ func setupAPI() *http.ServeMux {
 			return
 		}
 
-		// CRITICAL
-		if auth.Email == os.Getenv("EMAIL") && auth.Password == os.Getenv("PASSWORD") {
-			token := "sample-token-" + time.Now().Format(time.RFC3339)
+		if !validateAuth(auth) {
+			http.Error(w, "May contains only A-Za-z and 0-9", http.StatusBadRequest)
+			return
+		}
+
+		// --------------------------------------------
+
+		client := &http.Client{Timeout: 5 * time.Second}
+		jsonData, err := json.Marshal(auth)
+		if err != nil {
+			http.Error(w, "Failed to process authentication data", http.StatusInternalServerError)
+			return
+		}
+
+		req, err := http.NewRequest("POST", "http://localhost:7777/api/login", bytes.NewBuffer(jsonData))
+		if err != nil {
+			http.Error(w, "Failed to create auth request", http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			http.Error(w, "Authentication service unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(AuthResponse{Token: token})
+			var authResp AuthResponse
+			if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
+				return
+			}
+			json.NewEncoder(w).Encode(AuthResponse{Token: authResp.Token})
+			return
 		} else {
 			http.Error(w, `{"error": "Invalid credentials"}`, http.StatusUnauthorized)
 		}
